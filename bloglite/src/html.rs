@@ -575,7 +575,12 @@ pub async fn page(ctx: &ServerContext, settings: &PageSettings, body: &str) -> S
     };
     let html_lang = &ctx.args.html_lang;
     let extra_head = &settings.extra_head;
-    let version = include_str!("version.txt").trim();
+    let package_version = env!("CARGO_PKG_VERSION");
+    let version = match option_env!("BLOGLITE_BUILD_LABEL") {
+        Some("release") => package_version.to_owned(),
+        None | Some("") => format!("{package_version} (custom build)"),
+        Some(label) => format!("{package_version} ({label})"),
+    };
     let highlight = highlight_head(body);
     let katex = katex_head(body);
     let og_title = if settings.title.is_empty() {
