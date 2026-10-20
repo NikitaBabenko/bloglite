@@ -1,14 +1,32 @@
 # Bloglite on VibeNest — guided setup candidate
 
-**Status: not runtime validated.** This fork prepares a source build and manual
-configuration. It does not claim a successful build, deployment, persistence
-test, or fit within VibeNest Free. Upstream's small-memory description is not a
-measurement on VibeNest.
+**Status: current-environment refusal before dispatch (20 October 2026).**
+Authoritative target-host RAM, disk and safe build-capacity evidence was not
+available for this pilot, and no runtime/build slot was assigned. No build or
+deployment was started. The source-build preparation is retained, but runtime
+acceptance and Free-tier fit remain unknown. Upstream's small-memory description
+is not a measurement on VibeNest.
 
 Upstream: [rikhuijzer/bloglite](https://github.com/rikhuijzer/bloglite), commit
 `507db81d1a4f567a601538d9d315be0577b15e2f`, MIT. Application source and attribution
-are preserved. The added root Dockerfile builds the two Rust workspace crates
+are retained, with the narrow file-path compatibility change below. The added
+root Dockerfile builds the two Rust workspace crates
 into **one** service; `bloglite-auth` is a library, not a second application.
+
+## File-path compatibility change
+
+Application-code revision:
+[`28ac48712f601787000f160b5a7fd8e13df39057`](https://github.com/NikitaBabenko/bloglite/commit/28ac48712f601787000f160b5a7fd8e13df39057).
+Public file requests now safely select and validate a 16-character ASCII hex
+identifier. Short, non-hex and Unicode prefixes return 404 instead of risking
+a UTF-8 slicing panic. Existing `hash`, `hash-filename` and `hash/filename`
+URLs retain their suffix behavior, including Unicode after a valid identifier.
+
+Two handler regression tests were added for malformed paths, continued valid
+downloads, MIME type and exact file contents. All existing tests are retained.
+**Tests were not run (`tests_not_run`), and the fix has not been compiled or
+runtime verified.** Later documentation commits do not change that code revision.
+The HTML/upload trust model and other source-level caveats below remain.
 
 ## Before deployment
 

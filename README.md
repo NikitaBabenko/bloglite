@@ -2,7 +2,8 @@
 
 [![Deploy to VibeNest](https://vibenest.net/deploy-to-vibenest.svg)](https://vibenest.net/deploy?repo=https://github.com/NikitaBabenko/bloglite)
 
-**VibeNest setup candidate — not runtime validated.**
+**VibeNest setup candidate — not runtime validated.** The 20 October pilot
+stopped before dispatch because target build-capacity evidence was unavailable.
 Read the [guided setup and required configuration](VIBENEST.md) before continuing
 from the preview. This Rust workspace is one service and needs a persistent
 `/data` volume plus administrator credentials; the badge does not supply them.
