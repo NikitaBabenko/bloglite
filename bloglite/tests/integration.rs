@@ -539,3 +539,91 @@ async fn test_highlight_stylesheet() {
     assert!(!body.contains("highlight.min.js"));
     assert!(!body.contains("cdnjs.cloudflare.com"));
 }
+
+async fn file_path_regression_router() -> axum::Router {
+    let mut ctx = server_context().await;
+    ctx.args.trigger_token = None;
+    // All requests see the same in-memory SQLite database.
+    ctx.pool = r2d2::Pool::builder()
+        .max_size(1)
+        .build(r2d2_sqlite::SqliteConnectionManager::memory())
+        .unwrap();
+    bloglite::data::init(&ctx.args, &ctx.conn());
+    // Invalid rows ensure a 404 is validation, not just an absent DB record.
+    for sha in ["0123456789abcdef", "abc", "0123456789abcdeg"] {
+        ctx.conn()
+            .execute(
+                "INSERT INTO files (sha, mime_type, filename, data) VALUES (?, ?, ?, ?)",
+                rusqlite::params![
+                    sha,
+                    "text/plain",
+                    "original.txt",
+                    b"file-path-regression".as_slice()
+                ],
+            )
+            .unwrap();
+    }
+    app(ctx)
+}
+
+#[tokio::test]
+async fn test_file_path_rejects_invalid_hashes_and_remains_usable() {
+    let router = file_path_regression_router().await;
+    for path in [
+        // Byte offset 16 falls inside the decoded two-byte character.
+        "0123456789abcde%C3%A9",
+        // Byte offset 16 falls inside the decoded three-byte character.
+        "0123456789abcd0%E2%82%AC",
+        // Unicode inside an otherwise long-enough prefix.
+        "%C3%A90123456789abcdef",
+        "abc",
+        "0123456789abcdeg",
+        "0123456789abcdeg-suffix.txt",
+    ] {
+        // Both public route shapes must reject the malformed identifier.
+        for suffix in ["", "/example.txt"] {
+            let uri = format!("/files/{path}{suffix}");
+            let req = Request::builder()
+                .uri(uri.as_str())
+                .body(Body::empty())
+                .unwrap();
+            let response = router.clone().oneshot(req).await.unwrap();
+            assert_eq!(response.status(), StatusCode::NOT_FOUND, "{uri}");
+            let body = response.into_body().collect().await.unwrap().to_bytes();
+            assert!(!String::from_utf8_lossy(&body).contains("file-path-regression"));
+
+            let req = Request::builder()
+                .uri("/files/0123456789abcdef")
+                .body(Body::empty())
+                .unwrap();
+            let response = router.clone().oneshot(req).await.unwrap();
+            assert_eq!(response.status(), StatusCode::OK, "after {uri}");
+            let body = response.into_body().collect().await.unwrap().to_bytes();
+            assert_eq!(body.as_ref(), b"file-path-regression");
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_file_path_preserves_hash_and_filename_suffixes() {
+    let router = file_path_regression_router().await;
+    for uri in [
+        "/files/0123456789abcdef",
+        "/files/0123456789abcdef-example.txt",
+        "/files/0123456789abcdef/original.txt",
+        "/files/0123456789abcdef/renamed.txt",
+        // Unicode is allowed after the complete 16-hex identifier.
+        "/files/0123456789abcdef-%C3%A9.txt",
+        "/files/0123456789abcdef/%C3%A9.txt",
+    ] {
+        let req = Request::builder()
+            .uri(uri)
+            .body(Body::empty())
+            .unwrap();
+        let response = router.clone().oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{uri}");
+        assert_eq!(response.headers()["Content-Type"], "text/plain", "{uri}");
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        assert_eq!(body.as_ref(), b"file-path-regression", "{uri}");
+    }
+}

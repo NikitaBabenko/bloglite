@@ -265,13 +265,15 @@ async fn get_file(State(ctx): State<ServerContext>, Path(sha): Path<String>) -> 
     // filename. For security purposes, this should be okay since the only
     // person that can upload files is the site owner. The benefit of this is
     // that files can be renamed without breaking links.
-    let trim_len = 16;
-    let name = if trim_len < sha.len() {
-        sha[..trim_len].to_string()
-    } else {
-        sha.clone()
+    // Paths are percent-decoded UTF-8. Reject short/non-hex identifiers and
+    // prefixes that would cut through a character, while preserving suffixes.
+    let Some(name) = sha
+        .get(..16)
+        .filter(|name| name.bytes().all(|byte| byte.is_ascii_hexdigit()))
+    else {
+        return not_found(State(ctx)).await;
     };
-    let file = match File::get(&ctx.conn(), &name) {
+    let file = match File::get(&ctx.conn(), name) {
         Ok(file) => file,
         Err(_) => return not_found(State(ctx)).await,
     };
