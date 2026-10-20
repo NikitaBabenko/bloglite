@@ -1,0 +1,10 @@
+.git
+target
+public
+data
+**/target
+.env
+.env.*
+*.env
+**/*.sqlite
+**/*.sqlite-*

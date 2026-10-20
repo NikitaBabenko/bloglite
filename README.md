@@ -1,5 +1,12 @@
 # bloglite
 
+[![Deploy to VibeNest](https://vibenest.net/deploy-to-vibenest.svg)](https://vibenest.net/deploy?repo=https://github.com/NikitaBabenko/bloglite)
+
+**VibeNest setup candidate — not runtime validated.**
+Read the [guided setup and required configuration](VIBENEST.md) before continuing
+from the preview. This Rust workspace is one service and needs a persistent
+`/data` volume plus administrator credentials; the badge does not supply them.
+
 [build status]: https://img.shields.io/github/actions/workflow/status/rikhuijzer/bloglite/ci.yml?branch=main
 [actions]: https://github.com/rikhuijzer/bloglite/actions?query=branch%3Amain
 [container images]: https://zot.huijzer.xyz
